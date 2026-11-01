@@ -1,0 +1,19 @@
+# Credentials and personal configuration
+.env
+.env.*
+!.env.example
+*.local.*
+phone-login.txt
+known_hosts
+*.pem
+*.key
+# Health data, backups and generated files
+data/
+*.sqlite*
+*.db
+*.db-*
+*.log
+*.tar.gz
+*.zip
+node_modules/
+.DS_Store

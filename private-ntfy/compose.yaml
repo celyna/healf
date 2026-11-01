@@ -1,0 +1,19 @@
+services:
+  ntfy:
+    image: binwiederhier/ntfy@sha256:6ef4b819f722fccdc036af611c4774cfdc2de821ab74fdd48bbf4c9d6f8973da
+    container_name: oura-private-ntfy
+    command: serve
+    restart: unless-stopped
+    volumes:
+      - ./server.yml:/etc/ntfy/server.yml:ro
+      - ntfy-data:/var/lib/ntfy
+    networks:
+      - notifications
+    security_opt:
+      - no-new-privileges:true
+volumes:
+  ntfy-data:
+networks:
+  notifications:
+    external: true
+    name: oura-notifications

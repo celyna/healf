@@ -1,0 +1,10 @@
+base-url: "https://ntfy.example.com"
+listen-http: ":80"
+auth-file: "/var/lib/ntfy/auth.db"
+auth-default-access: "deny-all"
+cache-file: "/var/lib/ntfy/cache.db"
+cache-duration: "24h"
+behind-proxy: true
+upstream-base-url: "https://ntfy.sh"
+enable-signup: false
+enable-login: true

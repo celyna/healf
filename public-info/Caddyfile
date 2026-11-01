@@ -1,0 +1,25 @@
+oura.example.com {
+    root * /srv
+    header {
+        X-Content-Type-Options nosniff
+        Referrer-Policy no-referrer
+        Content-Security-Policy "default-src 'none'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'"
+    }
+    handle /import/apple-health {
+        request_body {
+            max_size 10MB
+        }
+        reverse_proxy oura-ntfy-app-1:3000
+    }
+    @allowed path / /index.html /privacy.html /terms.html /style.css
+    handle @allowed {
+        file_server
+    }
+    handle {
+        respond "Not found" 404
+    }
+}
+
+ntfy.example.com {
+    reverse_proxy oura-private-ntfy:80
+}

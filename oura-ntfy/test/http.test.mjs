@@ -1,0 +1,45 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { once } from 'node:events';
+
+test('HTTP flow protects status, rejects CSRF, binds OAuth state to browser, and hides credentials',async t=>{
+  const dir=mkdtempSync(join(tmpdir(),'oura-http-'));
+  const password='test-password-at-least-24-characters';
+  const proc=spawn(process.execPath,['src/server.mjs'],{env:{...process.env,PORT:'0',HOST:'127.0.0.1',BASE_URL:'http://localhost:3000',OURA_CLIENT_ID:'test-client',OURA_CLIENT_SECRET:'test-secret',NTFY_TOPIC:'test-topic',ADMIN_PASSWORD:password,ENCRYPTION_KEY:'ab'.repeat(32),WEBHOOK_VERIFICATION_TOKEN:'test-verification-at-least-24-characters',DATA_FILE:join(dir,'db.sqlite'),WEBHOOKS_ENABLED:'false'},stdio:['ignore','pipe','pipe']});
+  t.after(async()=>{if(proc.exitCode===null){proc.kill('SIGTERM');await once(proc,'exit');}rmSync(dir,{recursive:true,force:true});});
+  const port=await new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>reject(new Error('Server did not start')),10000);
+    proc.stdout.on('data',chunk=>{const m=chunk.toString().match(/ready on port (\d+)/);if(m){clearTimeout(timer);resolve(m[1]);}});
+    proc.on('exit',code=>{clearTimeout(timer);reject(new Error('Server exited '+code));});
+    proc.stderr.on('data',chunk=>{ if(chunk.toString().includes('EACCES')||chunk.toString().includes('EPERM')) {clearTimeout(timer);reject(new Error(chunk.toString()));} });
+  });
+  const base=`http://127.0.0.1:${port}`;
+  const auth={Authorization:'Basic '+Buffer.from('admin:'+password).toString('base64')};
+  assert.equal((await fetch(base+'/healthz')).status,200);
+  assert.equal((await fetch(base+'/')).status,401);
+  assert.equal((await fetch(base+'/webhook/oura')).status,404);
+  const page=await (await fetch(base+'/',{headers:auth})).text();
+  assert.match(page,/Connect your Oura account/);assert.ok(!page.includes(password));assert.ok(!page.includes('test-secret'));
+  const csrf=page.match(/name="csrf" value="([a-f0-9]+)"/)[1];
+  assert.equal((await fetch(base+'/connect',{method:'POST',headers:auth,body:'csrf=bad'})).status,403);
+  assert.equal((await fetch(base+'/sync',{method:'POST',headers:{...auth,Origin:'null'},body:'csrf=bad',redirect:'manual'})).status,403);
+  assert.equal((await fetch(base+'/sync',{method:'POST',headers:{...auth,Origin:'null'},body:new URLSearchParams({csrf}),redirect:'manual'})).status,303);
+  assert.equal((await fetch(base+'/connect',{method:'POST',headers:{...auth,Origin:'https://evil.example'},body:new URLSearchParams({csrf})})).status,403);
+  const connect=await fetch(base+'/connect',{method:'POST',headers:auth,body:new URLSearchParams({csrf}),redirect:'manual'});
+  assert.equal(connect.status,200);
+  const handoff=await connect.text();
+  assert.match(handoff,/http-equiv="refresh"/);
+  const redirect=new URL(handoff.match(/<a href="([^"]+)"/)[1].replaceAll('&amp;','&'));
+  assert.equal(redirect.origin,'https://cloud.ouraring.com');
+  assert.equal(redirect.searchParams.get('scope'),'daily spo2 workout');
+  assert.match(connect.headers.get('set-cookie'),/HttpOnly; SameSite=Lax/);
+  const callback=base+'/oauth/callback?state='+redirect.searchParams.get('state')+'&error=access_denied';
+  assert.equal((await fetch(callback)).status,400);
+  const denied=await fetch(callback,{headers:{Cookie:connect.headers.get('set-cookie').split(';')[0]}});
+  assert.match(await denied.text(),/declined/);
+  assert.equal((await fetch(callback,{headers:{Cookie:connect.headers.get('set-cookie').split(';')[0]}})).status,400);
+});

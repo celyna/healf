@@ -1,0 +1,12 @@
+.env
+.env.*
+*.local
+*.local.*
+data
+test
+node_modules
+.git
+*.sqlite*
+*.db
+*.log
+*.tar.gz
