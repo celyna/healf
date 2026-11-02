@@ -2,17 +2,17 @@
 
 Personal recovery context, delivered three times a day. healf combines Oura measurements and Apple Health workouts with your own history, then sends short AI-assisted summaries to your phone through ntfy.
 
-## Demo
+### Demo
 
-[![Watch the 15-second Healf demo](docs/media/healf-demo-poster.png)](https://github.com/celyna/healf/blob/main/docs/media/healf-demo.mp4)
+[![Watch the 15-second Healf demo](docs/media/healf-demo.gif)](https://github.com/celyna/healf/blob/main/docs/media/healf-demo.mp4)
 
 [Watch the demo](https://github.com/celyna/healf/blob/main/docs/media/healf-demo.mp4) · 15 seconds · synthetic health data
 
-## Why we built this
+### Why we built this
 
 Health apps show scores, but a score alone rarely explains what to do next. healf connects today's recovery to comparable past days: what you did, how you slept, and what happened afterward. Recommendations should explain their evidence instead of repeating “sleep early” or “take it easy.” Historical associations are context, not proof of cause or medical advice.
 
-## Architecture
+### Architecture
 
 ```mermaid
 flowchart TD
@@ -36,11 +36,11 @@ flowchart TD
 
 Times use `LLM_TIMEZONE`, including daylight saving. They do not follow phone travel automatically. Five-minute syncs and workout uploads are silent. Missed check-in windows are skipped; restarting within a window can catch up once. Failed AI attempts consume their slot; notification retries reuse the result. Delivery retries can occasionally duplicate a notification.
 
-## Setup
+### Setup
 
 You need Docker Compose on an always-on host, an Oura OAuth application, an OpenAI API key with billing enabled, and an ntfy server/topic with access restricted to you.
 
-### 1. Configure the app
+#### 1. Configure the app
 
 ```sh
 cd oura-ntfy
@@ -64,7 +64,7 @@ Keep the generated `ADMIN_PASSWORD`, `ENCRYPTION_KEY`, and webhook verification 
 
 **Current limitation:** scheduled check-ins require enabled OpenAI analysis. Disabling it or enabling `PRIVATE_NOTIFICATIONS` stops automatic check-ins; a standalone metrics-only schedule is not implemented.
 
-### 2. Start and connect
+#### 2. Start and connect
 
 Register `http://localhost:3000/oauth/callback` as the exact redirect URI in your Oura application. Then:
 
@@ -78,7 +78,7 @@ Open **http://localhost:3000**, sign in as `admin` using `ADMIN_PASSWORD`, and s
 
 The app binds host port 3000 to loopback. Closing the tunnel only closes dashboard access; the server continues running. Polling needs no public app endpoint. Optional Oura webhooks are disabled by default.
 
-### 3. Optional Apple Health workouts
+#### 3. Optional Apple Health workouts
 
 Use Health Auto Export with REST API support. Configure public HTTPS ingress using [`public-info/Caddyfile`](public-info/Caddyfile), replacing the example domains. The proxy must join `oura-notifications`, mount the Caddyfile and static files, expose ports 80/443, and persist its certificate data. It exposes `/import/apple-health` while keeping the dashboard private. Do not start two Caddy instances on the same ports; the app's optional HTTPS profile is an alternative layout.
 
@@ -93,7 +93,7 @@ HTTP 200 with `accepted` confirms ingestion; 401 means a token problem, 400 inva
 
 For self-hosted ntfy, [`private-ntfy/`](private-ntfy/) contains Compose/configuration helpers. Set your domain in `server.yml`, start that stack, and run `configure.py` on the server with `NTFY_SERVER=https://YOUR-NTFY-HOST`; it creates read-only phone access and write-only publishing credentials. Its paths assume `/opt/private-ntfy` and `/opt/oura-ntfy`. Put the files there first. iPhone wake notifications use the configured ntfy upstream; verify actual delivery on your phone.
 
-## How personal context works
+### How personal context works
 
 - **Baselines:** preceding 28 calendar days, excluding the day being evaluated; at least seven measured days per metric.
 - **Historical episodes:** searches 180 days for matching workout activity mixes/counts, durations within 30%, and distances within 30% when known. Recovery-state matches require at least two comparable baseline-relative metrics.
@@ -102,7 +102,7 @@ For self-hosted ntfy, [`private-ntfy/`](private-ntfy/) contains Compose/configur
 - **Sources:** daily steps/calories come from Oura. Apple workouts are preferred over matching Oura workouts by activity and start/end times within two minutes; deduplication is heuristic.
 - **Sleep timing:** compares the recorded bed interval with a manually supplied target. It does not determine completed sleep cycles, exact wake stage, or a guaranteed cycle-end alarm time. No “strain” measurement is invented.
 
-## Privacy and operation
+### Privacy and operation
 
 SQLite persists in the `oura-data` Docker volume. Normalized Oura records, supported Apple HR/speed/power/cadence samples, cached analysis and operational state remain until removed. Analysis windows are not retention limits. OAuth tokens are encrypted with the key in `.env`; health records and the upload token are not application-encrypted.
 
@@ -119,7 +119,7 @@ docker compose up -d --build # after code/config changes
 
 The status page reports sync/AI/delivery errors. `/healthz` checks process liveness, not data freshness or phone receipt. Revoke Oura access and stop the service to disconnect; deleting the data volume removes stored history irreversibly.
 
-## Development
+### Development
 
 Node.js 24+, built-in HTTP/crypto/SQLite APIs, no npm dependencies:
 
