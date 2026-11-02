@@ -2,6 +2,12 @@
 
 Personal recovery context, delivered three times a day. healf combines Oura measurements and Apple Health workouts with your own history, then sends short AI-assisted summaries to your phone through ntfy.
 
+## Demo
+
+[![Watch the 15-second Healf demo](docs/media/healf-demo-poster.png)](https://github.com/celyna/healf/blob/main/docs/media/healf-demo.mp4)
+
+[Watch the demo](https://github.com/celyna/healf/blob/main/docs/media/healf-demo.mp4) · 15 seconds · synthetic health data
+
 ## Why we built this
 
 Health apps show scores, but a score alone rarely explains what to do next. healf connects today's recovery to comparable past days: what you did, how you slept, and what happened afterward. Recommendations should explain their evidence instead of repeating “sleep early” or “take it easy.” Historical associations are context, not proof of cause or medical advice.
